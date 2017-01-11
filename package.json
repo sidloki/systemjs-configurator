@@ -5,5 +5,18 @@
   "main": "dist/systemjs-configurator.js",
   "repository": "git@github.com:sidloki/systemjs-configurator.git",
   "author": "Marco Strobel <mail@strobel.ch>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "babel-core": "^6.21.0",
+    "babel-preset-latest": "^6.16.0",
+    "chai": "^3.5.0",
+    "codecov": "^1.0.1",
+    "istanbul": "1.1.0-alpha.1",
+    "mocha": "^3.2.0"
+  },
+  "scripts": {
+    "test": "mocha --compilers js:babel-core/register",
+    "test-coverage": "rm -rf coverage/* && istanbul cover _mocha -- --compilers js:babel-core/register"
+  }
 }
