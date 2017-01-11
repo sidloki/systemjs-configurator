@@ -1,0 +1,9 @@
+{
+  "name": "systemjs-configurator",
+  "version": "0.1.0",
+  "description": "Build SystemJS configurations for node packages",
+  "main": "dist/systemjs-configurator.js",
+  "repository": "git@github.com:sidloki/systemjs-configurator.git",
+  "author": "Marco Strobel <mail@strobel.ch>",
+  "license": "MIT"
+}
