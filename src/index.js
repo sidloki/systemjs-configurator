@@ -8,7 +8,7 @@ export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
   } = {}) {
 
-  let meta, lookups, config, depTree;
+  let meta, config;
 
   config = {
     paths: {},
@@ -20,7 +20,7 @@ export async function buildConfig({
     fs.readFileSync(path.join(packageDir, "package.json"), "utf-8")
   );
 
-  depTree = await resolveDependencyTree(meta, packageDir);
+  await resolveDependencyTree(meta, packageDir, {excludes: excludes});
 
   if (outFile) {
     exports.writeConfig(config, outFile);
@@ -77,7 +77,6 @@ export function createSystemConfig(meta, rootdir="") {
 
 export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}={}) {
   return new Promise((resolve, reject) => {
-    let deps = {};
     let options = {
       basedir: path.resolve(basedir),
       lookups: ["peerDependencies", "dependencies"]
@@ -137,6 +136,6 @@ export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}
 
         resolve(normalizeTree(tree));
       }
-    })
+    });
   });
 }

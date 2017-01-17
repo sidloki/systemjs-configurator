@@ -77,54 +77,54 @@ describe("Configurator", () => {
         directories: {
           lib: "dist"
         }
-      }
+      };
     });
 
     it("should use directories.lib as mapping path", () => {
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [mapping,] = configurator.createSystemConfig(meta);
       assert.equal(mapping, "dist");
     });
 
     it("should prepend root directory to mapping path", () => {
-      let [mapping, config] = configurator.createSystemConfig(meta, "node_modules/test-package");
+      let [mapping,] = configurator.createSystemConfig(meta, "node_modules/test-package");
       assert.equal(mapping, "node_modules/test-package/dist");
     });
 
     it("should use base dir of main if no directories.lib in meta", () => {
       delete meta["directories"];
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [mapping,] = configurator.createSystemConfig(meta);
       assert.equal(mapping, "dist/js");
     });
 
     it("should make main path relative to mapping path", () => {
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.equal(config.main, "js/main.js");
     });
 
     it("should use 'module' entry to create main path", () => {
       meta.module = "dist/js/main.esm.js";
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.equal(config.format, "esm");
       assert.equal(config.main, "js/main.esm.js");
     });
 
     it("should use 'jsnext:main' entry to create main path", () => {
       meta["jsnext:main"] = "dist/js/main.esm.js";
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.equal(config.format, "esm");
       assert.equal(config.main, "js/main.esm.js");
     });
 
     it("should not create main config if no main is set", () => {
       delete meta["main"];
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.isFalse(!!config.main);
     });
 
     it("should create mapping path if main and directories.lib are not set", () => {
       delete meta["main"];
       delete meta["directories"];
-      let [mapping, config] = configurator.createSystemConfig(meta, "");
+      let [mapping,] = configurator.createSystemConfig(meta, "");
       assert.equal(mapping, "");
     });
 
@@ -137,7 +137,7 @@ describe("Configurator", () => {
           exports: "$"
         }
       };
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.equal(config.format, "global");
       assert.equal(config.main, "js/main.system.js");
       assert.deepEqual(config.meta, meta.systemjs.meta);
@@ -147,7 +147,7 @@ describe("Configurator", () => {
       meta.systemjs = {
         main: "js/main.system.js"
       };
-      let [mapping, config] = configurator.createSystemConfig(meta);
+      let [, config] = configurator.createSystemConfig(meta);
       assert.equal(config.main, "js/main.system.js");
     });
 
@@ -165,7 +165,7 @@ describe("Configurator", () => {
 
     beforeEach(() => {
       basedir = path.join(__dirname, "fixtures/resolve-tree");
-      meta = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf-8"))
+      meta = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf-8"));
     });
 
     it("normalizes root directory to relative path", async () => {
@@ -288,7 +288,7 @@ describe("Configurator", () => {
     it("should raise an error if dependency cannot be resolved", async () => {
       meta.dependencies["doesnotexist"] = null;
       try {
-        let depTree = await configurator.resolveDependencyTree(meta, basedir);
+        await configurator.resolveDependencyTree(meta, basedir);
       } catch (error) {
         assert(error);
       }
