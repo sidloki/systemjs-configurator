@@ -3,12 +3,15 @@ import path from "path";
 import { assert } from "chai";
 import { stub } from "sinon";
 
-import { configure} from "../src/index";
 import * as configurator from "../src/index";
 
 const configFilePath = "./test/system.config.js";
 
 
+function parseConfigFile(filePath) {
+  let content = fs.readFileSync(filePath);
+  return JSON.parse(content.slice("SystemJS.config(".length, content.length - 2));
+}
 
 function walkTree(tree, f) {
   tree.map((pkg) => {
@@ -16,13 +19,50 @@ function walkTree(tree, f) {
     walkTree(pkg.dependencies, f);
   });
 }
-describe('Tests', () => {
-  it('runs', () => {
-    assert.equal(configure(), 42);
-  });
-});
 
 describe("Configurator", () => {
+  describe("#writeConfig()", () => {
+
+    afterEach(() => {
+      try {
+        fs.unlinkSync(configFilePath);
+      } catch (e) {
+        //
+      }
+    });
+
+    it("creates systemjs config file for a given config object", () => {
+      let c = {
+        map: {
+          app: "path/to/app/dist/folder"
+        }
+      };
+      configurator.writeConfig(c, configFilePath);
+      assert.deepEqual(c, parseConfigFile(configFilePath));
+    });
+
+  });
+  describe("#buildConfig()", () => {
+
+    before(() => {
+      stub(configurator, "writeConfig");
+    });
+
+    after(() =>  {
+      configurator.writeConfig.restore();
+    });
+
+    it("should not write config file if no file path is given", async () => {
+      await configurator.buildConfig();
+      assert.isFalse(configurator.writeConfig.called);
+    });
+
+    it("should write config file if file path is given", async () => {
+      await configurator.buildConfig({outFile:configFilePath});
+      assert.isTrue(configurator.writeConfig.calledOnce);
+    });
+
+  });
 
   describe("#resolveDependencyTree()", async () => {
 
