@@ -129,7 +129,7 @@ describe("Configurator", () => {
 
       await configurator.buildConfig({packageDir:basedir, excludes:excludes});
       let args = configurator.resolveDependencyTree.getCall(0).args;
-      console.log(args);
+      
       assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
 
       configurator.resolveDependencyTree.restore();
