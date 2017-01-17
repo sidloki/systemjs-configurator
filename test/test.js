@@ -42,6 +42,7 @@ describe("Configurator", () => {
     });
 
   });
+
   describe("#buildConfig()", () => {
 
     before(() => {
@@ -67,21 +68,6 @@ describe("Configurator", () => {
   describe("#resolveDependencyTree()", async () => {
 
     let basedir, meta;
-
-    const checkOverrides = (overrides, pkg, props) => {
-      let override = overrides[`${pkg.meta.name}@${pkg.meta.version}`];
-      if (!override) {
-        override = overrides[pkg.meta.name];
-      }
-      if (override) {
-        for (let prop of props) {
-          assert.equal(pkg.meta[prop], override[prop]);
-        }
-      }
-      pkg.dependencies.map((depPkg) => {
-        checkOverrides(overrides, depPkg, props);
-      });
-    };
 
     beforeEach(() => {
       basedir = path.join(__dirname, "fixtures/resolve-tree");
