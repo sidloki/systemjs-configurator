@@ -93,6 +93,47 @@ describe("Configurator", () => {
 
       configurator.resolveDependencyTree.restore();
     });
+
+    it("should exclude given excludes", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
+      let excludes = ["b"];
+
+      spy(configurator, "resolveDependencyTree");
+
+      await configurator.buildConfig({packageDir:basedir, excludes:excludes});
+      let args = configurator.resolveDependencyTree.getCall(0).args;
+
+      assert.deepEqual(args[2].excludes, excludes);
+
+      configurator.resolveDependencyTree.restore();
+    });
+
+    it("should always exclude default excludes", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
+
+      spy(configurator, "resolveDependencyTree");
+
+      await configurator.buildConfig({packageDir:basedir});
+      let args = configurator.resolveDependencyTree.getCall(0).args;
+
+      assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
+
+      configurator.resolveDependencyTree.restore();
+    });
+
+    it("should exclude default excludes only once", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
+      let excludes = ["systemjs"];
+
+      spy(configurator, "resolveDependencyTree");
+
+      await configurator.buildConfig({packageDir:basedir, excludes:excludes});
+      let args = configurator.resolveDependencyTree.getCall(0).args;
+      console.log(args);
+      assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
+
+      configurator.resolveDependencyTree.restore();
+    });
   });
 
   describe("#createSystemConfig()", () => {

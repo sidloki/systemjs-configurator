@@ -3,6 +3,7 @@ import fs from "fs";
 import resolveTree from "resolve-tree";
 import deepExtend from "deep-extend";
 
+export const defaultExcludes = ["systemjs"];
 
 export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
@@ -25,6 +26,12 @@ export async function buildConfig({
   } else {
     overrides = {};
   }
+
+  defaultExcludes.map((name) => {
+    if (!excludes.includes(name)) {
+      excludes.push(name);
+    }
+  });
 
   pkgs = await exports.resolveDependencyTree(meta, packageDir, {excludes: excludes, overrides: overrides});
 
