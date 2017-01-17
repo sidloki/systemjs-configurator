@@ -1,0 +1,14 @@
+{
+  "name": "no-deps",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "dependencies": {
+    "systemjs-plugin-text": "1.0.0"
+  },
+  "overrides": {
+    "systemjs-plugin-text": {
+      "name": "text",
+      "main": "text.js"
+    }
+  }
+}

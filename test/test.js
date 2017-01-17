@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { assert } from "chai";
-import { stub } from "sinon";
+import { spy, stub } from "sinon";
 
 import * as configurator from "../src/index";
 
@@ -74,6 +74,22 @@ describe("Configurator", () => {
       let config = await configurator.buildConfig({packageDir:basedir});
       assert.equal(Object.keys(config.map).length, 0);
       assert.equal(Object.keys(config.packages).length, 1);
+    });
+
+    it("should apply overrides entry of package manifest", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
+      let meta = JSON.parse(
+        fs.readFileSync(path.join(basedir, "package.json"), "utf-8")
+      );
+
+      spy(configurator, "resolveDependencyTree");
+
+      let config = await configurator.buildConfig({packageDir:basedir});
+      let args = configurator.resolveDependencyTree.getCall(0).args;
+
+      assert.deepEqual(args[2].overrides, meta.overrides);
+
+      configurator.resolveDependencyTree.restore();
     });
 
     it("add map to package config for multiple versions", async () => {

@@ -8,7 +8,7 @@ export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
   } = {}) {
 
-  let meta, config, tree, mapPath, pkgConfig;
+  let meta, config, tree, mapPath, pkgConfig, overrides;
 
   config = {
     paths: {},
@@ -20,7 +20,13 @@ export async function buildConfig({
     fs.readFileSync(path.join(packageDir, "package.json"), "utf-8")
   );
 
-  tree = await resolveDependencyTree(meta, packageDir, {excludes: excludes});
+  if (meta.overrides) {
+    overrides = meta.overrides;
+  } else {
+    overrides = {};
+  }
+
+  tree = await exports.resolveDependencyTree(meta, packageDir, {excludes: excludes, overrides: overrides});
 
   tree.map((pkg) => {
     addPackage(config, pkg);
