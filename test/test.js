@@ -86,7 +86,7 @@ describe("Configurator", () => {
 
       spy(configurator, "resolveDependencyTree");
 
-      let config = await configurator.buildConfig({packageDir:basedir});
+      await configurator.buildConfig({packageDir:basedir});
       let args = configurator.resolveDependencyTree.getCall(0).args;
 
       assert.deepEqual(args[2].overrides, meta.overrides);
@@ -413,7 +413,7 @@ describe("Configurator", () => {
       assert.deepEqual(config.packages[pkg.mapPath], pkg.config);
     });
   });
-  
+
   describe("#addPackages", () => {
 
     let basedir, meta;
