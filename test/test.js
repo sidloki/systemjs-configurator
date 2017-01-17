@@ -13,6 +13,10 @@ function parseConfigFile(filePath) {
   return JSON.parse(content.slice("SystemJS.config(".length, content.length - 2));
 }
 
+function readManifest(dir) {
+  return JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf-8"));
+}
+
 function walkTree(tree, f) {
   tree.map((pkg) => {
     f(pkg);
@@ -78,9 +82,7 @@ describe("Configurator", () => {
 
     it("should apply overrides entry of package manifest", async () => {
       let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
-      let meta = JSON.parse(
-        fs.readFileSync(path.join(basedir, "package.json"), "utf-8")
-      );
+      let meta = readManifest(basedir);
 
       spy(configurator, "resolveDependencyTree");
 
@@ -91,13 +93,6 @@ describe("Configurator", () => {
 
       configurator.resolveDependencyTree.restore();
     });
-
-    it("add map to package config for multiple versions", async () => {
-      let basedir = path.join(__dirname, "fixtures/resolve-tree");
-      let config = await configurator.buildConfig({packageDir: basedir});
-      assert.ok(config.packages["node_modules/c"]["map"]["a"]);
-    });
-
   });
 
   describe("#createSystemConfig()", () => {
@@ -242,7 +237,7 @@ describe("Configurator", () => {
 
     beforeEach(() => {
       basedir = path.join(__dirname, "fixtures/resolve-tree");
-      meta = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf-8"));
+      meta = readManifest(basedir);
     });
 
     it("attaches systemjs config to item", async () => {
@@ -256,7 +251,6 @@ describe("Configurator", () => {
 
     it("normalizes root directory to relative path", async () => {
       let depTree = await configurator.resolveDependencyTree(meta, basedir);
-
       walkTree(depTree, (pkg) => {
         assert.isFalse(path.isAbsolute(pkg.root));
       });
@@ -378,6 +372,85 @@ describe("Configurator", () => {
       } catch (error) {
         assert(error);
       }
+    });
+  });
+  describe("#addPackage", () => {
+
+    let pkg;
+
+    before(() => {
+      pkg = {
+        meta: { name: "dummy-package" },
+        mapPath: "path/to/dummy/package",
+        config: {
+          main: "path/to/dummy/main/file"
+        }
+      };
+    });
+
+    it("initializes config if config has no map and packages property", async () => {
+      let config = {};
+      configurator.addPackage(config, pkg);
+      assert.ok(config.map);
+      assert.ok(config.packages);
+    });
+
+    it("creates map config", async () => {
+      let config = {};
+      configurator.addPackage(config, pkg);
+      assert.equal(config.map[pkg.meta.name], pkg.mapPath);
+    });
+
+    it("creates package config", async () => {
+      let config = {};
+      configurator.addPackage(config, pkg);
+      assert.deepEqual(config.packages[pkg.mapPath], pkg.config);
+    });
+
+    it("raises error if ", async () => {
+      let config = {};
+      configurator.addPackage(config, pkg);
+      assert.deepEqual(config.packages[pkg.mapPath], pkg.config);
+    });
+  });
+  
+  describe("#addPackages", () => {
+
+    let basedir, meta;
+
+    before(() => {
+      basedir = path.join(__dirname, "fixtures/resolve-tree");
+      meta = readManifest(basedir);
+    });
+
+    it("creates map config for deep dependencies", async () => {
+      let config = {};
+      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
+
+      configurator.addPackages(config, pkgs);
+
+      assert.ok(config.map["b1"]);
+      assert.ok(config.map["b2"]);
+    });
+
+    it("creates package config for deep dependencies", async () => {
+      let config = {};
+      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
+
+      configurator.addPackages(config, pkgs);
+
+      assert.ok(config.packages["node_modules/b/node_modules/b1"]);
+      assert.ok(config.packages["node_modules/b/node_modules/b2"]);
+    });
+
+    it("handles multiple package versions", async () => {
+      let config = {};
+      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
+
+      configurator.addPackages(config, pkgs);
+
+      assert.ok(config.packages["node_modules/c"]["map"]["a"]);
+      assert.ok(config.packages["node_modules/c"]["map"]["b"]);
     });
   });
 });

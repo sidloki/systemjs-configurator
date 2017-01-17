@@ -8,7 +8,7 @@ export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
   } = {}) {
 
-  let meta, config, tree, mapPath, pkgConfig, overrides;
+  let meta, config, pkgs, mapPath, pkgConfig, overrides;
 
   config = {
     paths: {},
@@ -26,11 +26,9 @@ export async function buildConfig({
     overrides = {};
   }
 
-  tree = await exports.resolveDependencyTree(meta, packageDir, {excludes: excludes, overrides: overrides});
+  pkgs = await exports.resolveDependencyTree(meta, packageDir, {excludes: excludes, overrides: overrides});
 
-  tree.map((pkg) => {
-    addPackage(config, pkg);
-  });
+  addPackages(config, pkgs);
 
   [mapPath, pkgConfig] = createSystemConfig(meta);
 
@@ -49,10 +47,26 @@ export function writeConfig(config, outFile) {
   fs.writeFileSync(outFile, `SystemJS.config(${configJson});`);
 }
 
+export function addPackages(config, pkgs, parent=null) {
+  pkgs.map((pkg) => {
+    addPackage(config, pkg, parent);
+  });
+  pkgs.map((pkg) => {
+    addPackages(config, pkg.dependencies, pkg);
+  });
+}
+
 export function addPackage(config, pkg, parent=null) {
   let name = pkg.meta.name;
   let pkgConfig = Object.assign({}, pkg.config);
   let mapPath = pkg.mapPath;
+
+  if (!config.map) {
+    config.map = {};
+  }
+  if (!config.packages) {
+    config.packages = {};
+  }
 
   if (!config.packages[mapPath]) {
     config.packages[mapPath] = pkgConfig;
@@ -60,7 +74,7 @@ export function addPackage(config, pkg, parent=null) {
     deepExtend(config.packages[mapPath], pkgConfig);
   }
 
-  if (config.map[name] && config.map[name] !== mapPath) {
+  if (config.map[name] && config.map[name] !== mapPath && parent) {
     let parentPkgConfig = config.packages[parent.mapPath];
     if (!parentPkgConfig.map) {
       parentPkgConfig.map = {};
@@ -69,10 +83,6 @@ export function addPackage(config, pkg, parent=null) {
   } else {
     config.map[name] = mapPath;
   }
-
-  pkg.dependencies.map((depPkg) => {
-    addPackage(config, depPkg, pkg);
-  });
 }
 
 export function createSystemConfig(meta, rootdir="") {
