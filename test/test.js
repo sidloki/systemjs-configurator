@@ -210,6 +210,15 @@ describe("Configurator", () => {
       meta = JSON.parse(fs.readFileSync(path.join(basedir, "package.json"), "utf-8"));
     });
 
+    it("attaches systemjs config to item", async () => {
+      let depTree = await configurator.resolveDependencyTree(meta, basedir);
+
+      walkTree(depTree, (pkg) => {
+        assert.isOk(pkg.mapPath);
+        assert.isOk(pkg.config);
+      });
+    });
+
     it("normalizes root directory to relative path", async () => {
       let depTree = await configurator.resolveDependencyTree(meta, basedir);
 

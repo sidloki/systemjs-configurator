@@ -107,6 +107,7 @@ export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}
           let dependencies = [];
           let root = path.relative(options.basedir, treeItem.root);
           let override = overrides[`${meta.name}@${meta.version}`];
+          let mapPath, config;
 
           if (!override) {
             override = overrides[meta.name];
@@ -124,8 +125,12 @@ export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}
             });
           }
 
+          [mapPath, config] = createSystemConfig(meta, root);
+
           return {
             root: root,
+            mapPath: mapPath,
+            config: config,
             meta: meta,
             dependencies: dependencies
           };
