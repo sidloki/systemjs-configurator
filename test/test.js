@@ -63,6 +63,19 @@ describe("Configurator", () => {
       assert.isTrue(configurator.writeConfig.calledOnce);
     });
 
+    it("should create paths entry for package", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
+      let config = await configurator.buildConfig({packageDir:basedir});
+      assert.equal(config.paths["no-deps"], "dist/");
+    });
+
+    it("should create config file if package has no dependencies", async () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
+      let config = await configurator.buildConfig({packageDir:basedir});
+      assert.equal(Object.keys(config.map).length, 0);
+      assert.equal(Object.keys(config.packages).length, 1);
+    });
+
     it("add map to package config for multiple versions", async () => {
       let basedir = path.join(__dirname, "fixtures/resolve-tree");
       let config = await configurator.buildConfig({packageDir: basedir});

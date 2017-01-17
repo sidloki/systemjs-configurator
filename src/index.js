@@ -8,7 +8,7 @@ export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
   } = {}) {
 
-  let meta, config, tree;
+  let meta, config, tree, mapPath, pkgConfig;
 
   config = {
     paths: {},
@@ -25,6 +25,11 @@ export async function buildConfig({
   tree.map((pkg) => {
     addPackage(config, pkg);
   });
+
+  [mapPath, pkgConfig] = createSystemConfig(meta);
+
+  config.paths[meta.name] = path.join(mapPath, "/");
+  config.packages[meta.name] = pkgConfig;
 
   if (outFile) {
     exports.writeConfig(config, outFile);
