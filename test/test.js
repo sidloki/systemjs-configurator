@@ -101,6 +101,43 @@ describe("Configurator", () => {
       assert.equal(config.main, "js/main.js");
     });
 
+    it("should normalize mapping path", () => {
+      meta.directories.lib = "./dist";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist");
+      assert.equal(config.main, "js/main.js");
+    });
+
+    it("should normalize main path", () => {
+      meta.main = "./dist/js/main.js";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist");
+      assert.equal(config.main, "js/main.js");
+    });
+
+    it("should normalize paths if root directory is not set", () => {
+      meta.directories.lib = "./dist";
+      meta.main = "./dist/main.js";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist");
+      assert.equal(config.main, "main.js");
+    });
+
+    it("should normalize paths if root directory is set", () => {
+      meta.directories.lib = "./dist";
+      meta.main = "./dist/main.js";
+      let [mapping, config] = configurator.createSystemConfig(meta, "node_modules/test-package");
+      assert.equal(config.main, "main.js");
+      assert.equal(mapping, "node_modules/test-package/dist");
+    });
+
+    it("should normalize mapping path if empty", () => {
+      delete meta["main"];
+      delete meta["directories"];
+      let [mapping,] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, ".");
+    });
+
     it("should use 'module' entry to create main path", () => {
       meta.module = "dist/js/main.esm.js";
       let [, config] = configurator.createSystemConfig(meta);
@@ -121,11 +158,16 @@ describe("Configurator", () => {
       assert.isFalse(!!config.main);
     });
 
-    it("should create mapping path if main and directories.lib are not set", () => {
+    it("should create mapping path if no main is set", () => {
       delete meta["main"];
-      delete meta["directories"];
-      let [mapping,] = configurator.createSystemConfig(meta, "");
-      assert.equal(mapping, "");
+      let [mapping,] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist");
+    });
+
+    it("should prepend mapping path with root directory if no main is set", () => {
+      delete meta["main"];
+      let [mapping,] = configurator.createSystemConfig(meta, "node_modules/test-package");
+      assert.equal(mapping, "node_modules/test-package/dist");
     });
 
     it("should apply 'systemjs' entry if set", () => {

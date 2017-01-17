@@ -57,19 +57,22 @@ export function createSystemConfig(meta, rootdir="") {
     mapping = main ? path.dirname(main) : "";
   }
 
-  if (rootdir) {
-    mapping = path.join(rootdir, mapping);
-  }
+  mapping = path.normalize(mapping);
 
   if (meta.systemjs) {
     Object.assign(config, meta.systemjs);
   }
 
   if (main) {
+    main = path.normalize(main);
     if (main.indexOf(mapping) === 0) {
       main = path.relative(mapping, main);
     }
     config["main"] = main;
+  }
+
+  if (rootdir) {
+    mapping = path.join(rootdir, mapping);
   }
 
   return [mapping, config];
