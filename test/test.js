@@ -65,6 +65,100 @@ describe("Configurator", () => {
 
   });
 
+  describe("#createSystemConfig()", () => {
+
+    let meta;
+
+    beforeEach(() => {
+      meta = {
+        name: "test-package",
+        version: "1.0.0",
+        main: "dist/js/main.js",
+        directories: {
+          lib: "dist"
+        }
+      }
+    });
+
+    it("should use directories.lib as mapping path", () => {
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist");
+    });
+
+    it("should prepend root directory to mapping path", () => {
+      let [mapping, config] = configurator.createSystemConfig(meta, "node_modules/test-package");
+      assert.equal(mapping, "node_modules/test-package/dist");
+    });
+
+    it("should use base dir of main if no directories.lib in meta", () => {
+      delete meta["directories"];
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(mapping, "dist/js");
+    });
+
+    it("should make main path relative to mapping path", () => {
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.main, "js/main.js");
+    });
+
+    it("should use 'module' entry to create main path", () => {
+      meta.module = "dist/js/main.esm.js";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.format, "esm");
+      assert.equal(config.main, "js/main.esm.js");
+    });
+
+    it("should use 'jsnext:main' entry to create main path", () => {
+      meta["jsnext:main"] = "dist/js/main.esm.js";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.format, "esm");
+      assert.equal(config.main, "js/main.esm.js");
+    });
+
+    it("should not create main config if no main is set", () => {
+      delete meta["main"];
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.isFalse(!!config.main);
+    });
+
+    it("should create mapping path if main and directories.lib are not set", () => {
+      delete meta["main"];
+      delete meta["directories"];
+      let [mapping, config] = configurator.createSystemConfig(meta, "");
+      assert.equal(mapping, "");
+    });
+
+    it("should apply 'systemjs' entry if set", () => {
+      meta.systemjs = {
+        main: "dist/js/main.system.js",
+        format: "global",
+        meta: {
+          deps: ["jquery"],
+          exports: "$"
+        }
+      };
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.format, "global");
+      assert.equal(config.main, "js/main.system.js");
+      assert.deepEqual(config.meta, meta.systemjs.meta);
+    });
+
+    it("should notice if 'systemjs.main' entry is relative path", () => {
+      meta.systemjs = {
+        main: "js/main.system.js"
+      };
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.main, "js/main.system.js");
+    });
+
+    it("should notice if 'main' entry is relative path", () => {
+      meta.main = "js/main.js";
+      let [mapping, config] = configurator.createSystemConfig(meta);
+      assert.equal(config.main, "js/main.js");
+      assert.equal(mapping, "dist");
+    });
+  });
+
   describe("#resolveDependencyTree()", async () => {
 
     let basedir, meta;

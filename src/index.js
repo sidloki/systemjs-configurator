@@ -34,6 +34,47 @@ export function writeConfig(config, outFile) {
   fs.writeFileSync(outFile, `SystemJS.config(${configJson});`);
 }
 
+export function createSystemConfig(meta, rootdir="") {
+  let mapping, config, main;
+
+  config = {};
+
+  if (meta.systemjs && meta.systemjs.main) {
+    main = meta.systemjs.main;
+  } else if (meta["module"]) {
+    main = meta["module"];
+    config.format = "esm";
+  } else if (meta["jsnext:main"]) {
+    main = meta["jsnext:main"];
+    config.format = "esm";
+  } else {
+    main = meta["main"];
+  }
+
+  if (meta.directories && meta.directories.lib) {
+    mapping = meta.directories.lib;
+  } else {
+    mapping = main ? path.dirname(main) : "";
+  }
+
+  if (rootdir) {
+    mapping = path.join(rootdir, mapping);
+  }
+
+  if (meta.systemjs) {
+    Object.assign(config, meta.systemjs);
+  }
+
+  if (main) {
+    if (main.indexOf(mapping) === 0) {
+      main = path.relative(mapping, main);
+    }
+    config["main"] = main;
+  }
+
+  return [mapping, config];
+}
+
 export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}={}) {
   return new Promise((resolve, reject) => {
     let deps = {};
