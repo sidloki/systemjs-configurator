@@ -6,7 +6,7 @@ import deepExtend from "deep-extend";
 export const defaultExcludes = ["systemjs"];
 
 export async function buildConfig({
-    packageDir=process.cwd(), outFile=null, excludes=[]
+    basedir=process.cwd(), outfile=null, excludes=[]
   } = {}) {
 
   let meta, config, pkgs, mapPath, pkgConfig, overrides;
@@ -18,7 +18,7 @@ export async function buildConfig({
   };
 
   meta = JSON.parse(
-    fs.readFileSync(path.join(packageDir, "package.json"), "utf-8")
+    fs.readFileSync(path.join(basedir, "package.json"), "utf-8")
   );
 
   if (meta.overrides) {
@@ -33,7 +33,7 @@ export async function buildConfig({
     }
   });
 
-  pkgs = await exports.resolveDependencyTree(meta, packageDir, {excludes: excludes, overrides: overrides});
+  pkgs = await exports.resolveDependencyTree(meta, basedir, {excludes: excludes, overrides: overrides});
 
   addPackages(config, pkgs);
 
@@ -42,16 +42,16 @@ export async function buildConfig({
   config.paths[meta.name] = path.join(mapPath, "/");
   config.packages[meta.name] = pkgConfig;
 
-  if (outFile) {
-    exports.writeConfig(config, outFile);
+  if (outfile) {
+    exports.writeConfig(config, outfile);
   }
 
   return config;
 }
 
-export function writeConfig(config, outFile) {
+export function writeConfig(config, outfile) {
   let configJson = JSON.stringify(config, null, 2);
-  fs.writeFileSync(outFile, `SystemJS.config(${configJson});`);
+  fs.writeFileSync(outfile, `SystemJS.config(${configJson});`);
 }
 
 export function addPackages(config, pkgs, parent=null) {

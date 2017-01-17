@@ -63,19 +63,19 @@ describe("Configurator", () => {
     });
 
     it("should write config file if file path is given", async () => {
-      await configurator.buildConfig({outFile:configFilePath});
+      await configurator.buildConfig({outfile:configFilePath});
       assert.isTrue(configurator.writeConfig.calledOnce);
     });
 
     it("should create paths entry for package", async () => {
       let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
-      let config = await configurator.buildConfig({packageDir:basedir});
+      let config = await configurator.buildConfig({basedir:basedir});
       assert.equal(config.paths["no-deps"], "dist/");
     });
 
     it("should create config file if package has no dependencies", async () => {
       let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
-      let config = await configurator.buildConfig({packageDir:basedir});
+      let config = await configurator.buildConfig({basedir:basedir});
       assert.equal(Object.keys(config.map).length, 0);
       assert.equal(Object.keys(config.packages).length, 1);
     });
@@ -86,7 +86,7 @@ describe("Configurator", () => {
 
       spy(configurator, "resolveDependencyTree");
 
-      await configurator.buildConfig({packageDir:basedir});
+      await configurator.buildConfig({basedir:basedir});
       let args = configurator.resolveDependencyTree.getCall(0).args;
 
       assert.deepEqual(args[2].overrides, meta.overrides);
@@ -100,7 +100,7 @@ describe("Configurator", () => {
 
       spy(configurator, "resolveDependencyTree");
 
-      await configurator.buildConfig({packageDir:basedir, excludes:excludes});
+      await configurator.buildConfig({basedir:basedir, excludes:excludes});
       let args = configurator.resolveDependencyTree.getCall(0).args;
 
       assert.deepEqual(args[2].excludes, excludes);
@@ -113,7 +113,7 @@ describe("Configurator", () => {
 
       spy(configurator, "resolveDependencyTree");
 
-      await configurator.buildConfig({packageDir:basedir});
+      await configurator.buildConfig({basedir:basedir});
       let args = configurator.resolveDependencyTree.getCall(0).args;
 
       assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
@@ -127,9 +127,9 @@ describe("Configurator", () => {
 
       spy(configurator, "resolveDependencyTree");
 
-      await configurator.buildConfig({packageDir:basedir, excludes:excludes});
+      await configurator.buildConfig({basedir:basedir, excludes:excludes});
       let args = configurator.resolveDependencyTree.getCall(0).args;
-      
+
       assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
 
       configurator.resolveDependencyTree.restore();
