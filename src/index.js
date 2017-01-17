@@ -93,39 +93,33 @@ export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}
         const normalizeTree = (tree) => {
           let normalizedTree = [];
 
-          tree.map((depPkg) => {
-            if (!isExcluded(depPkg)) {
-              normalizedTree.push(normalizePackage(depPkg));
+          tree.map((treeItem) => {
+            if (!isExcluded(treeItem.meta)) {
+              normalizedTree.push(normalizeTreeItem(treeItem));
             }
           });
 
           return normalizedTree;
         };
 
-        const isExcluded = (pkg) => {
-          let name = pkg.meta.name;
-          let version = pkg.meta.version;
-          return (excludes.includes(name) || excludes.includes(`${name}@${version}`));
-        };
-
-        const normalizePackage = (pkg) => {
-          let meta = Object.assign({}, pkg.meta);
+        const normalizeTreeItem = (treeItem) => {
+          let meta = Object.assign({}, treeItem.meta);
           let dependencies = [];
-          let root = path.relative(options.basedir, pkg.root);
-          let override = overrides[`${pkg.meta.name}@${pkg.meta.version}`];
+          let root = path.relative(options.basedir, treeItem.root);
+          let override = overrides[`${meta.name}@${meta.version}`];
 
           if (!override) {
-            override = overrides[pkg.meta.name];
+            override = overrides[meta.name];
           }
 
           if (override) {
             deepExtend(meta, override);
           }
 
-          if (pkg.dependencies) {
-            pkg.dependencies.map((depPkg) => {
-              if (!isExcluded(depPkg)) {
-                dependencies.push(normalizePackage(depPkg));
+          if (treeItem.dependencies) {
+            treeItem.dependencies.map((treeItem) => {
+              if (!isExcluded(treeItem.meta)) {
+                dependencies.push(normalizeTreeItem(treeItem));
               }
             });
           }
@@ -135,6 +129,12 @@ export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}
             meta: meta,
             dependencies: dependencies
           };
+        };
+
+        const isExcluded = (meta) => {
+          let name = meta.name;
+          let version = meta.version;
+          return (excludes.includes(name) || excludes.includes(`${name}@${version}`));
         };
 
         resolve(normalizeTree(tree));
