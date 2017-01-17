@@ -63,6 +63,12 @@ describe("Configurator", () => {
       assert.isTrue(configurator.writeConfig.calledOnce);
     });
 
+    it("add map to package config for multiple versions", async () => {
+      let basedir = path.join(__dirname, "fixtures/resolve-tree");
+      let config = await configurator.buildConfig({packageDir: basedir});
+      assert.ok(config.packages["node_modules/c"]["map"]["a"]);
+    });
+
   });
 
   describe("#createSystemConfig()", () => {

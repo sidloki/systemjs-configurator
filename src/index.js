@@ -8,7 +8,7 @@ export async function buildConfig({
     packageDir=process.cwd(), outFile=null, excludes=[]
   } = {}) {
 
-  let meta, config;
+  let meta, config, tree;
 
   config = {
     paths: {},
@@ -20,7 +20,11 @@ export async function buildConfig({
     fs.readFileSync(path.join(packageDir, "package.json"), "utf-8")
   );
 
-  await resolveDependencyTree(meta, packageDir, {excludes: excludes});
+  tree = await resolveDependencyTree(meta, packageDir, {excludes: excludes});
+
+  tree.map((pkg) => {
+    addPackage(config, pkg);
+  });
 
   if (outFile) {
     exports.writeConfig(config, outFile);
@@ -32,6 +36,32 @@ export async function buildConfig({
 export function writeConfig(config, outFile) {
   let configJson = JSON.stringify(config, null, 2);
   fs.writeFileSync(outFile, `SystemJS.config(${configJson});`);
+}
+
+export function addPackage(config, pkg, parent=null) {
+  let name = pkg.meta.name;
+  let pkgConfig = Object.assign({}, pkg.config);
+  let mapPath = pkg.mapPath;
+
+  if (!config.packages[mapPath]) {
+    config.packages[mapPath] = pkgConfig;
+  } else {
+    deepExtend(config.packages[mapPath], pkgConfig);
+  }
+
+  if (config.map[name] && config.map[name] !== mapPath) {
+    let parentPkgConfig = config.packages[parent.mapPath];
+    if (!parentPkgConfig.map) {
+      parentPkgConfig.map = {};
+    }
+    parentPkgConfig.map[name] = mapPath;
+  } else {
+    config.map[name] = mapPath;
+  }
+
+  pkg.dependencies.map((depPkg) => {
+    addPackage(config, depPkg, pkg);
+  });
 }
 
 export function createSystemConfig(meta, rootdir="") {
