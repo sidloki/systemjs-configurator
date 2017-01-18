@@ -2,7 +2,8 @@
   "name": "systemjs-configurator",
   "version": "0.1.0",
   "description": "Build SystemJS configurations for node packages",
-  "main": "dist/systemjs-configurator.js",
+  "main": "dist/systemjs-configurator.legacy.js",
+  "module": "dist/systemjs-configurator.js",
   "repository": "git@github.com:sidloki/systemjs-configurator.git",
   "author": "Marco Strobel <mail@strobel.ch>",
   "license": "MIT",
@@ -12,17 +13,20 @@
   },
   "devDependencies": {
     "babel-core": "^6.21.0",
+    "babel-plugin-async-to-promises": "^1.0.5",
     "babel-polyfill": "^6.20.0",
     "babel-preset-latest": "^6.16.0",
-    "babel-preset-stage-3": "^6.17.0",
     "chai": "^3.5.0",
     "codecov": "^1.0.1",
     "eslint": "^3.13.1",
     "istanbul": "1.1.0-alpha.1",
     "mocha": "^3.2.0",
+    "rollup": "^0.41.4",
+    "rollup-plugin-babel": "^2.7.1",
     "sinon": "^1.17.7"
   },
   "scripts": {
+    "build": "rm -rf dist/* && rollup -c",
     "lint": "eslint src/ test/",
     "test": "mocha --compilers js:babel-core/register --require babel-polyfill",
     "test-coverage": "rm -rf coverage/* && istanbul cover _mocha -- --compilers js:babel-core/register --require babel-polyfill"
