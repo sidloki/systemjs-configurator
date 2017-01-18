@@ -11,7 +11,7 @@
   "overrides": {
     "bootstrap": {
       "main": "dist/js/bootstrap.js",
-      "directoreis": {
+      "directories": {
         "lib": "dist"
       },
       "systemjs": {
