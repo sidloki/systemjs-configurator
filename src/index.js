@@ -93,12 +93,16 @@ export function addPackage(config, pkg, parent=null) {
 }
 
 export function createSystemConfig(meta, rootdir="") {
-  let mapping, config, main;
+  let mapping, config, main, systemConfig;
 
   config = {};
 
-  if (meta.systemjs && meta.systemjs.main) {
-    main = meta.systemjs.main;
+  if (meta.systemjs) {
+    systemConfig = Object.assign({}, meta.systemjs);
+  }
+
+  if (systemConfig && systemConfig.main) {
+    main = systemConfig.main;
   } else if (meta["module"]) {
     main = meta["module"];
     config.format = "esm";
@@ -117,16 +121,17 @@ export function createSystemConfig(meta, rootdir="") {
 
   mapping = path.normalize(mapping);
 
-  if (meta.systemjs) {
-    Object.assign(config, meta.systemjs);
-  }
-
   if (main) {
     main = path.normalize(main);
     if (main.indexOf(mapping) === 0) {
       main = path.relative(mapping, main);
     }
     config["main"] = main;
+  }
+
+  if (systemConfig) {
+    delete systemConfig["main"];
+    Object.assign(config, systemConfig);
   }
 
   if (rootdir) {
