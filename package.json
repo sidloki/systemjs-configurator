@@ -28,6 +28,7 @@
   "scripts": {
     "build": "rm -rf dist/* && rollup -c",
     "lint": "eslint src/ test/",
+    "prepublish": "rm -rf dist/* && rollup -c",
     "test": "mocha --compilers js:babel-core/register --require babel-polyfill",
     "test-coverage": "rm -rf coverage/* && istanbul cover _mocha -- --compilers js:babel-core/register --require babel-polyfill"
   }
