@@ -7,7 +7,9 @@
     "bootstrap": "^3.3.7",
     "jquery": "^3.1.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "systemjs-configurator": "^0.2.0"
+  },
   "overrides": {
     "bootstrap": {
       "main": "dist/js/bootstrap.js",
@@ -16,7 +18,9 @@
       },
       "systemjs": {
         "format": "global",
-        "deps": ["jquery"],
+        "deps": [
+          "jquery"
+        ],
         "exports": "$"
       }
     }
