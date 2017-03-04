@@ -27,18 +27,13 @@ const configurator = require("systemjs-configurator");
 const options = {
   basedir: "path/to/dir",
   outfile: "path/to/out/file",
-  excludes: ["package-a", "package-b", ...]
+  excludes: ["package-a", "package-b", ...],
+  overrides: { "systemjs-plugin-text": {name: "text"} }
 };
 
-configurator
-  .buildConfig(options)
-  .then((config) => {
-    console.log(config);
-  })
-  .catch((error) => {
-    console.log("Coniguration error");
-    console.log(error);
-  });
+let config = configurator.buildConfig(options);
+
+console.log(JSON.stringify(config, null, 2));
 ```
 
 **options:**
@@ -46,8 +41,10 @@ configurator
   (default: `process.cwd()`).
 - `outfile`: The file path to write out the config to. If not defined no file
   will be written (default: `null`).
-- `excludes`: An list of package names to exclude from the configuration
+- `excludes`: A list of package names to exclude from the configuration
   (default: `[]`).
+- `overrides`: An object containing package overrides
+  (default: `{}`).
 
 ## Examples ##
 
