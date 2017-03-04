@@ -4,10 +4,8 @@ export default {
   entry: "src/index.js",
   format: "cjs",
   external: [
-    "deep-extend",
     "fs",
-    "path",
-    "resolve-tree"
+    "path"
   ],
   plugins: [
     babel({
