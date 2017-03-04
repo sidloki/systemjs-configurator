@@ -10,7 +10,6 @@
   "dependencies": {},
   "devDependencies": {
     "babel-core": "^6.21.0",
-    "babel-polyfill": "^6.20.0",
     "babel-preset-latest": "^6.16.0",
     "chai": "^3.5.0",
     "codecov": "^1.0.1",
@@ -25,7 +24,7 @@
     "build": "rm -rf dist/* && rollup -c",
     "lint": "eslint src/ test/",
     "prepublish": "rm -rf dist/* && rollup -c",
-    "test": "mocha --compilers js:babel-core/register --require babel-polyfill",
-    "test-coverage": "rm -rf coverage/* && istanbul cover _mocha -- --compilers js:babel-core/register --require babel-polyfill"
+    "test": "mocha --compilers js:babel-core/register",
+    "test-coverage": "rm -rf coverage/* && istanbul cover _mocha -- --compilers js:babel-core/register"
   }
 }
