@@ -126,7 +126,7 @@ function addDependecies(config, pkg, options) {
         meta = _findManifest2[1];
 
     var dep = createPackage(dir, meta, options);
-    if (!config.packages[dep.location] && !options.excludes.includes(dep.name + "@" + dep.version) && !options.excludes.includes(dep.name)) {
+    if (!config.packages[dep.location] && options.excludes.indexOf(dep.name + "@" + dep.version) < 0 && options.excludes.indexOf(dep.name) < 0) {
       addPackage(config, dep, pkg);
       deps.push(dep);
     }
