@@ -6,37 +6,10 @@ bootstrap@^3.3.7:
   version "3.3.7"
   resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-3.3.7.tgz#5a389394549f23330875a3b150656574f8a9eb71"
 
-deep-extend@^0.4.1:
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/deep-extend/-/deep-extend-0.4.1.tgz#efe4113d08085f4e6f9687759810f807469e2253"
-
-fw@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/fw/-/fw-0.1.2.tgz#3524f6793d16e83bc0124e945082c13093bd799a"
-
 jquery@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.1.1.tgz#347c1c21c7e004115e0a4da32cece041fad3c8a3"
 
-object-assign@^4.0.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
-
-resolve-tree@^0.1.13:
-  version "0.1.13"
-  resolved "https://registry.yarnpkg.com/resolve-tree/-/resolve-tree-0.1.13.tgz#e247d370d63fa5e50f3248a5937a3abaaa1bc4f6"
-  dependencies:
-    fw "^0.1.2"
-    object-assign "^4.0.1"
-    resolve "^1.1.6"
-
-resolve@^1.1.6:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.2.0.tgz#9589c3f2f6149d1417a40becc1663db6ec6bc26c"
-
-systemjs-configurator@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/systemjs-configurator/-/systemjs-configurator-0.2.0.tgz#cc9cfccb4417925e11686cac8ebdfb44ecc2326c"
-  dependencies:
-    deep-extend "^0.4.1"
-    resolve-tree "^0.1.13"
+systemjs-configurator@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/systemjs-configurator/-/systemjs-configurator-0.3.0.tgz#c5902238d086010b4b19f4223f1862fe6657d3bc"
