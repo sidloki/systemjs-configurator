@@ -1,5 +1,5 @@
 {
-  "name": "no-deps",
+  "name": "dummy-pkg",
   "version": "1.0.0",
   "main": "dist/index.js"
 }

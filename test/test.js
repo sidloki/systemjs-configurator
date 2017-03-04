@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { assert } from "chai";
-import { spy, stub } from "sinon";
+import { stub } from "sinon";
 
 import * as configurator from "../src/index";
 
@@ -11,17 +11,6 @@ const configFilePath = "./test/system.config.js";
 function parseConfigFile(filePath) {
   let content = fs.readFileSync(filePath);
   return JSON.parse(content.slice("SystemJS.config(".length, content.length - 2));
-}
-
-function readManifest(dir) {
-  return JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf-8"));
-}
-
-function walkTree(tree, f) {
-  tree.map((pkg) => {
-    f(pkg);
-    walkTree(pkg.dependencies, f);
-  });
 }
 
 describe("Configurator", () => {
@@ -49,98 +38,146 @@ describe("Configurator", () => {
 
   describe("#buildConfig()", () => {
 
-    before(() => {
-      stub(configurator, "writeConfig");
+    it("should have defaults for build options", () => {
+      let config = configurator.buildConfig();
+      assert(config.packages["systemjs-configurator"]);
     });
 
-    after(() =>  {
+    it("should not write config file if no file path is given", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
+
+      stub(configurator, "writeConfig");
+
+      configurator.buildConfig({basedir:basedir});
+
+      assert.isFalse(configurator.writeConfig.called);
+
       configurator.writeConfig.restore();
     });
 
-    it("should not write config file if no file path is given", async () => {
-      await configurator.buildConfig();
-      assert.isFalse(configurator.writeConfig.called);
-    });
+    it("should write config file if file path is given", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
 
-    it("should write config file if file path is given", async () => {
-      await configurator.buildConfig({outfile:configFilePath});
+      stub(configurator, "writeConfig");
+
+      configurator.buildConfig({basedir: basedir, outfile:configFilePath});
       assert.isTrue(configurator.writeConfig.calledOnce);
+
+      configurator.writeConfig.restore();
     });
 
-    it("should create paths entry for package", async () => {
+    it("should create paths entry for main package", () => {
       let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
-      let config = await configurator.buildConfig({basedir:basedir});
-      assert.equal(config.paths["no-deps"], "dist/");
+      let config = configurator.buildConfig({basedir:basedir});
+      assert.equal(config.paths["dummy-pkg/"], "dist/");
     });
 
-    it("should create config file if package has no dependencies", async () => {
+    it("should create packages entry for main package with main config", () => {
       let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
-      let config = await configurator.buildConfig({basedir:basedir});
+      let config = configurator.buildConfig({basedir:basedir});
+      assert.deepEqual(config.packages["dummy-pkg"], { main: "index.js" });
+    });
+
+    it("should not create map entry for main package", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
+      let config = configurator.buildConfig({basedir:basedir});
       assert.equal(Object.keys(config.map).length, 0);
-      assert.equal(Object.keys(config.packages).length, 1);
     });
 
-    it("should apply overrides entry of package manifest", async () => {
-      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
-      let meta = readManifest(basedir);
-
-      spy(configurator, "resolveDependencyTree");
-
-      await configurator.buildConfig({basedir:basedir});
-      let args = configurator.resolveDependencyTree.getCall(0).args;
-
-      assert.deepEqual(args[2].overrides, meta.overrides);
-
-      configurator.resolveDependencyTree.restore();
+    it("should raise an error if a package dependency cannot be found", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-missing-dep");
+      assert.throws(() => {
+        configurator.buildConfig({basedir:basedir});
+      });
     });
 
-    it("should exclude given excludes", async () => {
-      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
-      let excludes = ["b"];
-
-      spy(configurator, "resolveDependencyTree");
-
-      await configurator.buildConfig({basedir:basedir, excludes:excludes});
-      let args = configurator.resolveDependencyTree.getCall(0).args;
-
-      assert.deepEqual(args[2].excludes, excludes);
-
-      configurator.resolveDependencyTree.restore();
+    it("should create map config for dependencies", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-deps");
+      let config = configurator.buildConfig({basedir:basedir});
+      assert.equal(config.map.a, "node_modules/a");
+      assert.equal(config.map.b, "node_modules/b");
+      assert.equal(config.map.c, "node_modules/c");
     });
 
-    it("should always exclude default excludes", async () => {
-      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
-
-      spy(configurator, "resolveDependencyTree");
-
-      await configurator.buildConfig({basedir:basedir});
-      let args = configurator.resolveDependencyTree.getCall(0).args;
-
-      assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
-
-      configurator.resolveDependencyTree.restore();
+    it("should create packages config for dependencies", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-deps");
+      let config = configurator.buildConfig({basedir:basedir});
+      assert.deepEqual(config.packages["node_modules/a"], {main: "index.js"});
+      assert.deepEqual(config.packages["node_modules/b"], {main: "index.js"});
+      assert.deepEqual(config.packages["node_modules/c"], {main: "index.js"});
     });
 
-    it("should exclude default excludes only once", async () => {
-      let basedir = path.join(__dirname, "fixtures/pkg-with-overrides");
-      let excludes = ["systemjs"];
+    it("should resolve circular dependencies", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-circular-deps");
+      let config = configurator.buildConfig({basedir: basedir});
+      assert.deepEqual(Object.keys(config.map), ["a", "b", "c"]);
+      assert.deepEqual(Object.keys(config.packages), ["dummy-pkg", "node_modules/a", "node_modules/b", "node_modules/c"]);
+    });
 
-      spy(configurator, "resolveDependencyTree");
+    it("should resolve deep dependencies", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-deep-deps");
+      let config = configurator.buildConfig({basedir: basedir});
+      assert.equal(config.map.b1, "node_modules/b/node_modules/b1");
+      assert.equal(config.map.b2, "node_modules/b/node_modules/b2");
+      assert(config.packages["node_modules/b/node_modules/b1"]);
+      assert(config.packages["node_modules/b/node_modules/b2"]);
+    });
 
-      await configurator.buildConfig({basedir:basedir, excludes:excludes});
-      let args = configurator.resolveDependencyTree.getCall(0).args;
+    it("should resolve different package versions", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-different-versions");
+      let config = configurator.buildConfig({basedir: basedir});
+      assert.notEqual(config.map.a, "node_modules/c/node_modules/a");
+      assert.notEqual(config.map.b, "node_modules/c/node_modules/b");
+      assert.equal(config.packages["node_modules/c"].map.a, "node_modules/c/node_modules/a");
+      assert.equal(config.packages["node_modules/c"].map.b, "node_modules/c/node_modules/b");
+    });
 
-      assert.deepEqual(args[2].excludes, configurator.defaultExcludes);
+    it("should always exclude default excludes", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-systemjs-dep");
+      let config = configurator.buildConfig({basedir: basedir});
+      assert(!config.map.systemjs);
+      assert(!config.packages["node_modules/systemjs"]);
+    });
 
-      configurator.resolveDependencyTree.restore();
+    it("should exclude given excludes", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-deps");
+      let excludes = ["a", "b"];
+      let config = configurator.buildConfig({basedir: basedir, excludes: excludes});
+      excludes.map((name) => {
+        assert(!config.map[name]);
+        assert(!config.packages[`node_modules/${name}`]);
+      });
+    });
+
+    it("should use overrides entry of main package manifest", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-overrides");
+      let config = configurator.buildConfig({basedir: basedir});
+      assert(config.map.text);
+      assert.deepEqual(config.packages["node_modules/systemjs-plugin-text"], {main: "text.js"});
+    });
+
+    it("should use given overrides", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-deps");
+      let overrides = {
+        a: {
+          main: "a.js"
+        }
+      };
+      let config = configurator.buildConfig({basedir: basedir, overrides: overrides});
+      assert.deepEqual(config.packages["node_modules/a"], {main: "a.js"});
     });
   });
 
-  describe("#createSystemConfig()", () => {
+  describe("#createPackage()", () => {
 
-    let meta;
+    let dir, meta, options;
 
     beforeEach(() => {
+      dir = __dirname;
+      options = {
+        basedir: __dirname,
+        overrides: {}
+      };
       meta = {
         name: "test-package",
         version: "1.0.0",
@@ -151,94 +188,95 @@ describe("Configurator", () => {
       };
     });
 
-    it("should use directories.lib as mapping path", () => {
-      let [mapping,] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist");
+    it("should use directories.lib as location path", () => {
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist");
     });
 
-    it("should prepend root directory to mapping path", () => {
-      let [mapping,] = configurator.createSystemConfig(meta, "node_modules/test-package");
-      assert.equal(mapping, "node_modules/test-package/dist");
+    it("should prepend package dir to locatin path", () => {
+      dir = path.join(options.basedir, "path/to/package");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "path/to/package/dist");
     });
 
     it("should use base dir of main if no directories.lib in meta", () => {
       delete meta["directories"];
-      let [mapping,] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist/js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist/js");
     });
 
-    it("should make main path relative to mapping path", () => {
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.main, "js/main.js");
+    it("should make main path relative to location path", () => {
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.main, "js/main.js");
     });
 
-    it("should normalize mapping path", () => {
+    it("should normalize location path", () => {
       meta.directories.lib = "./dist";
-      let [mapping, config] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist");
-      assert.equal(config.main, "js/main.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist");
     });
 
     it("should normalize main path", () => {
       meta.main = "./dist/js/main.js";
-      let [mapping, config] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist");
-      assert.equal(config.main, "js/main.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.main, "js/main.js");
     });
 
-    it("should normalize paths if root directory is not set", () => {
+    it("should normalize paths if package directory is base directory", () => {
       meta.directories.lib = "./dist";
       meta.main = "./dist/main.js";
-      let [mapping, config] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist");
-      assert.equal(config.main, "main.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.main, "main.js");
+      assert.equal(pkg.location, "dist");
     });
 
-    it("should normalize paths if root directory is set", () => {
+    it("should normalize paths if package directory is not empty string", () => {
       meta.directories.lib = "./dist";
       meta.main = "./dist/main.js";
-      let [mapping, config] = configurator.createSystemConfig(meta, "node_modules/test-package");
-      assert.equal(config.main, "main.js");
-      assert.equal(mapping, "node_modules/test-package/dist");
+      dir = path.join(options.basedir, "path/to/package");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.main, "main.js");
+      assert.equal(pkg.location, "path/to/package/dist");
     });
 
-    it("should normalize mapping path if empty", () => {
+    it("should normalize location path if path is empty string", () => {
       delete meta["main"];
       delete meta["directories"];
-      let [mapping,] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, ".");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, ".");
     });
 
     it("should use 'module' entry to create main path", () => {
       meta.module = "dist/js/main.esm.js";
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.format, "esm");
-      assert.equal(config.main, "js/main.esm.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.format, "esm");
+      assert.equal(pkg.config.main, "js/main.esm.js");
     });
 
     it("should use 'jsnext:main' entry to create main path", () => {
       meta["jsnext:main"] = "dist/js/main.esm.js";
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.format, "esm");
-      assert.equal(config.main, "js/main.esm.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.format, "esm");
+      assert.equal(pkg.config.main, "js/main.esm.js");
     });
 
     it("should not create main config if no main is set", () => {
       delete meta["main"];
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.isFalse(!!config.main);
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert(!pkg.config.main);
     });
 
-    it("should create mapping path if no main is set", () => {
+    it("should create location path if no main is set", () => {
       delete meta["main"];
-      let [mapping,] = configurator.createSystemConfig(meta);
-      assert.equal(mapping, "dist");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist");
     });
 
-    it("should prepend mapping path with root directory if no main is set", () => {
+    it("should prepend location path with package directory if no main is set", () => {
       delete meta["main"];
-      let [mapping,] = configurator.createSystemConfig(meta, "node_modules/test-package");
-      assert.equal(mapping, "node_modules/test-package/dist");
+      dir = path.join(options.basedir, "path/to/package");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "path/to/package/dist");
     });
 
     it("should apply 'systemjs' entry if set", () => {
@@ -250,248 +288,26 @@ describe("Configurator", () => {
           exports: "$"
         }
       };
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.format, "global");
-      assert.equal(config.main, "js/main.system.js");
-      assert.deepEqual(config.meta, meta.systemjs.meta);
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.config.format, "global");
+      assert.equal(pkg.config.main, "js/main.system.js");
+      assert.deepEqual(pkg.config.meta, meta.systemjs.meta);
     });
 
-    it("should notice if 'systemjs.main' entry is relative path", () => {
+    it("should notice if 'systemjs.main' entry is relative to location path", () => {
       meta.systemjs = {
         main: "js/main.system.js"
       };
-      let [, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.main, "js/main.system.js");
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist");
+      assert.equal(pkg.config.main, "js/main.system.js");
     });
 
-    it("should notice if 'main' entry is relative path", () => {
+    it("should notice if 'main' entry is relative to location path", () => {
       meta.main = "js/main.js";
-      let [mapping, config] = configurator.createSystemConfig(meta);
-      assert.equal(config.main, "js/main.js");
-      assert.equal(mapping, "dist");
-    });
-  });
-
-  describe("#resolveDependencyTree()", async () => {
-
-    let basedir, meta;
-
-    beforeEach(() => {
-      basedir = path.join(__dirname, "fixtures/resolve-tree");
-      meta = readManifest(basedir);
-    });
-
-    it("attaches systemjs config to item", async () => {
-      let depTree = await configurator.resolveDependencyTree(meta, basedir);
-
-      walkTree(depTree, (pkg) => {
-        assert.isOk(pkg.mapPath);
-        assert.isOk(pkg.config);
-      });
-    });
-
-    it("normalizes root directory to relative path", async () => {
-      let depTree = await configurator.resolveDependencyTree(meta, basedir);
-      walkTree(depTree, (pkg) => {
-        assert.isFalse(path.isAbsolute(pkg.root));
-      });
-    });
-
-    it("should exclude package by names", async () => {
-      let excludes = ["a", "b1"];
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {excludes: excludes});
-
-      walkTree(depTree, (pkg) => {
-        assert.isFalse(excludes.includes(pkg.meta.name));
-      });
-    });
-
-    it("should exclude packages by name and version", async () => {
-      let excludes = ["a@2.0.0", "b1@1.0.0"];
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {excludes: excludes});
-
-      walkTree(depTree, (pkg) => {
-        assert.isFalse(excludes.includes(`${pkg.meta.name}@${pkg.meta.version}`));
-      });
-    });
-
-    it("should not exclude packages with other version", async () => {
-      let excludes = ["a@1.0.0"];
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {excludes: excludes});
-      let matches = [];
-
-      walkTree(depTree, (pkg) => {
-        if (pkg.meta.name === "a") {
-          matches.push(pkg);
-        }
-      });
-      assert.isTrue(matches.length > 0);
-      matches.map((pkg) => {
-        assert.notEqual(pkg.meta.version, "1.0.0");
-      });
-    });
-
-    it("should assign overrides to package manifest", async () => {
-      let overrides = {
-        "a": { "main": "newMainA.js" },
-        "b1": { "main": "newMainB1.js"}
-      };
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {overrides: overrides});
-
-      walkTree(depTree, (pkg) => {
-        let override = overrides[pkg.meta.name];
-        if (override) {
-          assert.equal(pkg.meta.main, override.main);
-        }
-      });
-    });
-
-
-    it("should deeply extend package manifest if override is given", async () => {
-      let overrides = {
-        "a@2.0.0": {
-          "jspm": {
-            "directories": {
-              "lib": "lib"
-            },
-            "deps": [
-              "jquery@3.0.0"
-            ]
-          }
-        }
-      };
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {overrides: overrides});
-
-      walkTree(depTree, (pkg) => {
-        let override = overrides[`${pkg.meta.name}@${pkg.meta.version}`];
-        if (override) {
-          assert.equal(pkg.meta.jspm.directories.lib, "lib");
-          assert.equal(pkg.meta.jspm.directories.dist, "dist");
-          assert.deepEqual(pkg.meta.jspm.deps, override.jspm.deps);
-        }
-      });
-    });
-
-    it("should assign overrides to package manifest by version", async () => {
-      let overrides = {
-        "a@2.0.0": { "main": "newMainA.js" },
-        "b1@1.0.0": { "main": "newMainB1.js"}
-      };
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {overrides: overrides});
-
-      walkTree(depTree, (pkg) => {
-        let override = overrides[`${pkg.meta.name}@${pkg.meta.version}`];
-        if (override) {
-          assert.equal(pkg.meta.main, override.main);
-        }
-      });
-    });
-
-    it("should prefer versionized override to common override", async () => {
-      let overrides = {
-        "a": { "main": "newMainA.js" },
-        "a@2.0.0": { "main": "newMainA_V2.js" }
-      };
-      let depTree = await configurator.resolveDependencyTree(meta, basedir, {overrides: overrides});
-      let matches = [];
-
-      walkTree(depTree, (pkg) => {
-        if (pkg.meta.name === "a" && pkg.meta.version === "2.0.0") {
-          matches.push(pkg);
-        }
-      });
-      assert.isTrue(matches.length > 0);
-      matches.map((pkg) => {
-        assert.equal(pkg.meta.main, "newMainA_V2.js");
-      });
-    });
-
-    it("should raise an error if dependency cannot be resolved", async () => {
-      meta.dependencies["doesnotexist"] = null;
-      try {
-        await configurator.resolveDependencyTree(meta, basedir);
-      } catch (error) {
-        assert(error);
-      }
-    });
-  });
-  describe("#addPackage", () => {
-
-    let pkg;
-
-    before(() => {
-      pkg = {
-        meta: { name: "dummy-package" },
-        mapPath: "path/to/dummy/package",
-        config: {
-          main: "path/to/dummy/main/file"
-        }
-      };
-    });
-
-    it("initializes config if config has no map and packages property", async () => {
-      let config = {};
-      configurator.addPackage(config, pkg);
-      assert.ok(config.map);
-      assert.ok(config.packages);
-    });
-
-    it("creates map config", async () => {
-      let config = {};
-      configurator.addPackage(config, pkg);
-      assert.equal(config.map[pkg.meta.name], pkg.mapPath);
-    });
-
-    it("creates package config", async () => {
-      let config = {};
-      configurator.addPackage(config, pkg);
-      assert.deepEqual(config.packages[pkg.mapPath], pkg.config);
-    });
-
-    it("raises error if ", async () => {
-      let config = {};
-      configurator.addPackage(config, pkg);
-      assert.deepEqual(config.packages[pkg.mapPath], pkg.config);
-    });
-  });
-
-  describe("#addPackages", () => {
-
-    let basedir, meta;
-
-    before(() => {
-      basedir = path.join(__dirname, "fixtures/resolve-tree");
-      meta = readManifest(basedir);
-    });
-
-    it("creates map config for deep dependencies", async () => {
-      let config = {};
-      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
-
-      configurator.addPackages(config, pkgs);
-
-      assert.ok(config.map["b1"]);
-      assert.ok(config.map["b2"]);
-    });
-
-    it("creates package config for deep dependencies", async () => {
-      let config = {};
-      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
-
-      configurator.addPackages(config, pkgs);
-
-      assert.ok(config.packages["node_modules/b/node_modules/b1"]);
-      assert.ok(config.packages["node_modules/b/node_modules/b2"]);
-    });
-
-    it("handles multiple package versions", async () => {
-      let config = {};
-      let pkgs = await configurator.resolveDependencyTree(meta, basedir);
-
-      configurator.addPackages(config, pkgs);
-
-      assert.ok(config.packages["node_modules/c"]["map"]["a"]);
-      assert.ok(config.packages["node_modules/c"]["map"]["b"]);
+      let pkg = configurator.createPackage(dir, meta, options);
+      assert.equal(pkg.location, "dist");
+      assert.equal(pkg.config.main, "js/main.js");
     });
   });
 });

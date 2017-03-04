@@ -1,46 +1,31 @@
 import path from "path";
 import fs from "fs";
-import resolveTree from "resolve-tree";
-import deepExtend from "deep-extend";
 
-export const defaultExcludes = ["systemjs"];
+const defaultExcludes = ["systemjs"];
 
-export async function buildConfig({
-    basedir=process.cwd(), outfile=null, excludes=[]
-  } = {}) {
+export function buildConfig({
+    basedir=process.cwd(), outfile=null, excludes=[], overrides={}} = {}
+) {
 
-  let meta, config, pkgs, mapPath, pkgConfig, overrides;
-
-  config = {
-    paths: {},
-    map: {},
-    packages: {}
+  let meta = readManifest(basedir);
+  let options = {
+    basedir: path.resolve(basedir),
+    excludes: [...defaultExcludes, ...excludes],
+    overrides: Object.assign({}, meta.overrides, overrides)
   };
 
-  meta = JSON.parse(
-    fs.readFileSync(path.join(basedir, "package.json"), "utf-8")
-  );
-
-  if (meta.overrides) {
-    overrides = meta.overrides;
-  } else {
-    overrides = {};
-  }
-
-  defaultExcludes.map((name) => {
-    if (!excludes.includes(name)) {
-      excludes.push(name);
+  let pkg = createPackage(basedir, meta, options);
+  let config = {
+    paths: {
+      [`${pkg.name}/`]: `${pkg.location}/`
+    },
+    map: {},
+    packages: {
+      [pkg.name]: pkg.config
     }
-  });
+  };
 
-  pkgs = await exports.resolveDependencyTree(meta, basedir, {excludes: excludes, overrides: overrides});
-
-  addPackages(config, pkgs);
-
-  [mapPath, pkgConfig] = createSystemConfig(meta);
-
-  config.paths[meta.name] = path.join(mapPath, "/");
-  config.packages[meta.name] = pkgConfig;
+  addDependecies(config, pkg, options);
 
   if (outfile) {
     exports.writeConfig(config, outfile);
@@ -54,159 +39,103 @@ export function writeConfig(config, outfile) {
   fs.writeFileSync(outfile, `SystemJS.config(${configJson});`);
 }
 
-export function addPackages(config, pkgs, parent=null) {
-  pkgs.map((pkg) => {
-    addPackage(config, pkg, parent);
-  });
-  pkgs.map((pkg) => {
-    addPackages(config, pkg.dependencies, pkg);
-  });
+function readManifest(dir) {
+  let file = path.join(dir, "package.json");
+  return JSON.parse(fs.readFileSync(file, "utf-8"));
 }
 
-export function addPackage(config, pkg, parent=null) {
-  let name = pkg.meta.name;
-  let pkgConfig = Object.assign({}, pkg.config);
-  let mapPath = pkg.mapPath;
-
-  if (!config.map) {
-    config.map = {};
-  }
-  if (!config.packages) {
-    config.packages = {};
-  }
-
-  if (!config.packages[mapPath]) {
-    config.packages[mapPath] = pkgConfig;
-  } else {
-    deepExtend(config.packages[mapPath], pkgConfig);
-  }
-
-  if (config.map[name] && config.map[name] !== mapPath && parent) {
-    let parentPkgConfig = config.packages[parent.mapPath];
-    if (!parentPkgConfig.map) {
-      parentPkgConfig.map = {};
+function findManifest(name, fromdir) {
+  let dir = path.join(fromdir, "node_modules", name);
+  try {
+    let meta = readManifest(dir);
+    return [dir, meta];
+  } catch (error) {
+    let nextdir = path.join(fromdir, "..");
+    if (nextdir === fromdir) {
+      throw new Error(`Cannot find manifest for "${name}".`);
     }
-    parentPkgConfig.map[name] = mapPath;
-  } else {
-    config.map[name] = mapPath;
+    return findManifest(name, nextdir);
   }
 }
 
-export function createSystemConfig(meta, rootdir="") {
-  let mapping, config, main, systemConfig;
+export function createPackage(dir, meta, options) {
+  let pkg = {};
+  let override = options.overrides[`${meta.name}@${meta.version}`] || options.overrides[meta.name];
 
-  config = {};
+  Object.assign(meta, override);
 
-  if (meta.systemjs) {
-    systemConfig = Object.assign({}, meta.systemjs);
-  }
+  pkg.name = meta.name;
+  pkg.version = meta.version;
+  pkg.dir = path.relative(options.basedir, path.resolve(dir));
+  pkg.config = {};
 
-  if (systemConfig && systemConfig.main) {
-    main = systemConfig.main;
+  if (meta.systemjs && meta.systemjs.main) {
+    pkg.config.main = meta.systemjs.main;
+    delete meta.systemjs["main"];
   } else if (meta["module"]) {
-    main = meta["module"];
-    config.format = "esm";
+    pkg.config.main = meta["module"];
+    pkg.config.format = "esm";
   } else if (meta["jsnext:main"]) {
-    main = meta["jsnext:main"];
-    config.format = "esm";
+    pkg.config.main = meta["jsnext:main"];
+    pkg.config.format = "esm";
   } else {
-    main = meta["main"];
+    pkg.config.main = meta["main"];
+    // pkg.config.format = "cjs";
   }
 
   if (meta.directories && meta.directories.lib) {
-    mapping = meta.directories.lib;
+    pkg.location = meta.directories.lib;
   } else {
-    mapping = main ? path.dirname(main) : "";
+    pkg.location = pkg.config.main ? path.dirname(pkg.config.main) : "";
   }
 
-  mapping = path.normalize(mapping);
+  pkg.location = path.normalize(pkg.location);
 
-  if (main) {
-    main = path.normalize(main);
-    if (main.indexOf(mapping) === 0) {
-      main = path.relative(mapping, main);
+  if (pkg.config.main) {
+    pkg.config.main = path.normalize(pkg.config.main);
+    if (pkg.config.main.indexOf(pkg.location) === 0) {
+      pkg.config.main = path.relative(pkg.location, pkg.config.main);
     }
-    config["main"] = main;
   }
 
-  if (systemConfig) {
-    delete systemConfig["main"];
-    Object.assign(config, systemConfig);
+  if (meta.systemjs) {
+    Object.assign(pkg.config, meta.systemjs);
   }
 
-  if (rootdir) {
-    mapping = path.join(rootdir, mapping);
-  }
+  pkg.location = path.join(pkg.dir, pkg.location);
 
-  return [mapping, config];
+  pkg.dependencies = Object.assign({}, meta.dependencies);
+
+  return pkg;
 }
 
-export function resolveDependencyTree(meta, basedir, {excludes=[], overrides={}}={}) {
-  return new Promise((resolve, reject) => {
-    let options = {
-      basedir: path.resolve(basedir),
-      lookups: ["peerDependencies", "dependencies"]
-    };
-
-    resolveTree.manifest(meta, options, (error, tree) => {
-      if (error) {
-        reject(error);
-      } else {
-
-        const normalizeTree = (tree) => {
-          let normalizedTree = [];
-
-          tree.map((treeItem) => {
-            if (!isExcluded(treeItem.meta)) {
-              normalizedTree.push(normalizeTreeItem(treeItem));
-            }
-          });
-
-          return normalizedTree;
-        };
-
-        const normalizeTreeItem = (treeItem) => {
-          let meta = Object.assign({}, treeItem.meta);
-          let dependencies = [];
-          let root = path.relative(options.basedir, treeItem.root);
-          let override = overrides[`${meta.name}@${meta.version}`];
-          let mapPath, config;
-
-          if (!override) {
-            override = overrides[meta.name];
-          }
-
-          if (override) {
-            deepExtend(meta, override);
-          }
-
-          if (treeItem.dependencies) {
-            treeItem.dependencies.map((treeItem) => {
-              if (!isExcluded(treeItem.meta)) {
-                dependencies.push(normalizeTreeItem(treeItem));
-              }
-            });
-          }
-
-          [mapPath, config] = createSystemConfig(meta, root);
-
-          return {
-            root: root,
-            mapPath: mapPath,
-            config: config,
-            meta: meta,
-            dependencies: dependencies
-          };
-        };
-
-        const isExcluded = (meta) => {
-          let name = meta.name;
-          let version = meta.version;
-          return (excludes.includes(name) || excludes.includes(`${name}@${version}`));
-        };
-
-        resolve(normalizeTree(tree));
-      }
-    });
+function addDependecies(config, pkg, options) {
+  Object.keys(pkg.dependencies).reduce((deps, name) => {
+    let [dir, meta] = findManifest(name, path.join(options.basedir, pkg.dir));
+    let dep = createPackage(dir, meta, options);
+    if (
+      !config.packages[dep.location]
+      && !options.excludes.includes(`${dep.name}@${dep.version}`)
+      && !options.excludes.includes(dep.name)
+    ) {
+      addPackage(config, dep, pkg);
+      deps.push(dep);
+    }
+    return deps;
+  }, []).map((dep) => {
+    addDependecies(config, dep, options);
   });
+}
+
+function addPackage(config, pkg, parent) {
+  if (!config.map[pkg.name]) {
+    config.map[pkg.name] = pkg.location;
+  } else {
+    if (!config.packages[parent.location].map) {
+      config.packages[parent.location].map = {};
+    }
+    config.packages[parent.location].map[pkg.name] = pkg.location;
+  }
+
+  config.packages[pkg.location] = pkg.config;
 }
