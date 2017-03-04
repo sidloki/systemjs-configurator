@@ -115,8 +115,8 @@ function addDependecies(config, pkg, options) {
     let dep = createPackage(dir, meta, options);
     if (
       !config.packages[dep.location]
-      && !options.excludes.includes(`${dep.name}@${dep.version}`)
-      && !options.excludes.includes(dep.name)
+      && options.excludes.indexOf(`${dep.name}@${dep.version}`) < 0
+      && options.excludes.indexOf(dep.name) < 0
     ) {
       addPackage(config, dep, pkg);
       deps.push(dep);
