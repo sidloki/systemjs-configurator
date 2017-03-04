@@ -11,8 +11,7 @@ export default {
     babel({
       babelrc: false,
       presets: [
-        ["es2015", {"modules": false}],
-        "es2016", "es2017"
+        ["es2015", {"modules": false}]
       ],
       exclude: "node_modules/**"
     })
