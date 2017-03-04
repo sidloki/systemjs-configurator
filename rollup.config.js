@@ -13,9 +13,6 @@ export default {
       presets: [
         ["es2015", {"modules": false}]
       ],
-      plugins: [
-        "async-to-promises"
-      ],
       exclude: "node_modules/**"
     })
   ],

@@ -10,7 +10,6 @@
   "dependencies": {},
   "devDependencies": {
     "babel-core": "^6.21.0",
-    "babel-plugin-async-to-promises": "^1.0.5",
     "babel-polyfill": "^6.20.0",
     "babel-preset-latest": "^6.16.0",
     "chai": "^3.5.0",
