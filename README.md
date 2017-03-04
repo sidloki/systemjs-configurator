@@ -34,6 +34,8 @@ const options = {
 let config = configurator.buildConfig(options);
 
 console.log(JSON.stringify(config, null, 2));
+
+configurator.writeConfig(config, "systemjs.config.js");
 ```
 
 **options:**
