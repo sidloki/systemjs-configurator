@@ -1,6 +1,6 @@
 {
   "name": "systemjs-configurator",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Build SystemJS configurations for node packages",
   "main": "dist/systemjs-configurator.legacy.js",
   "module": "dist/systemjs-configurator.js",

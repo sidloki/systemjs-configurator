@@ -17,6 +17,8 @@ function buildConfig() {
       outfile = _ref$outfile === undefined ? null : _ref$outfile,
       _ref$excludes = _ref.excludes,
       excludes = _ref$excludes === undefined ? [] : _ref$excludes,
+      _ref$includes = _ref.includes,
+      includes = _ref$includes === undefined ? [] : _ref$includes,
       _ref$overrides = _ref.overrides,
       overrides = _ref$overrides === undefined ? {} : _ref$overrides;
 
@@ -33,6 +35,12 @@ function buildConfig() {
     map: {},
     packages: _defineProperty({}, pkg.name, pkg.config)
   };
+
+  includes.map(function (name) {
+    if (!pkg.dependencies[name]) {
+      pkg.dependencies[name] = true;
+    }
+  });
 
   addDependecies(config, pkg, options);
 
