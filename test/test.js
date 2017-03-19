@@ -149,6 +149,16 @@ describe("Configurator", () => {
       });
     });
 
+    it("should include given includes", () => {
+      let basedir = path.join(__dirname, "fixtures/pkg-no-deps");
+      let includes = ["a", "b"];
+      let config = configurator.buildConfig({basedir: basedir, includes: includes});
+      includes.map((name) => {
+        assert(config.map[name]);
+        assert(config.packages[`node_modules/${name}`]);
+      });
+    });
+
     it("should use overrides entry of main package manifest", () => {
       let basedir = path.join(__dirname, "fixtures/pkg-overrides");
       let config = configurator.buildConfig({basedir: basedir});

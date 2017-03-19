@@ -4,7 +4,8 @@ import fs from "fs";
 const defaultExcludes = ["systemjs"];
 
 export function buildConfig({
-    basedir=process.cwd(), outfile=null, excludes=[], overrides={}} = {}
+    basedir=process.cwd(), outfile=null, excludes=[], includes=[],
+    overrides={}} = {}
 ) {
 
   let meta = readManifest(basedir);
@@ -24,6 +25,12 @@ export function buildConfig({
       [pkg.name]: pkg.config
     }
   };
+
+  includes.map((name) => {
+    if (!pkg.dependencies[name]) {
+      pkg.dependencies[name] = true;
+    }
+  });
 
   addDependecies(config, pkg, options);
 
